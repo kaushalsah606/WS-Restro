@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Restaurant POS - Modern Professional Theme */
+    --background: 210 20% 98%;
+    --foreground: 220 25% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    /* Primary - Deep Teal */
+    --primary: 174 62% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Slate */
+    --secondary: 215 20% 93%;
+    --secondary-foreground: 220 25% 20%;
+
+    --muted: 215 20% 95%;
+    --muted-foreground: 215 15% 45%;
+
+    /* Accent - Warm Amber */
+    --accent: 38 95% 55%;
+    --accent-foreground: 38 95% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Status Colors */
+    --status-available: 142 70% 45%;
+    --status-occupied: 38 95% 55%;
+    --status-reserved: 262 83% 58%;
+    --status-cleaning: 210 100% 55%;
+
+    /* Order Status */
+    --order-pending: 38 95% 55%;
+    --order-preparing: 25 95% 53%;
+    --order-ready: 142 70% 45%;
+    --order-served: 174 62% 38%;
+    --order-cancelled: 0 72% 51%;
+
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 174 62% 38%;
+
+    --radius: 0.75rem;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+    --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Sidebar */
+    --sidebar-background: 220 25% 10%;
+    --sidebar-foreground: 215 20% 90%;
+    --sidebar-primary: 174 62% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 18%;
+    --sidebar-accent-foreground: 215 20% 90%;
+    --sidebar-border: 220 25% 20%;
+    --sidebar-ring: 174 62% 50%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 210 20% 95%;
+
+    --card: 220 25% 12%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 220 25% 12%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 174 62% 50%;
+    --primary-foreground: 220 25% 8%;
+
+    --secondary: 220 25% 18%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 220 25% 15%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 38 95% 55%;
+    --accent-foreground: 38 95% 10%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 25% 20%;
+    --input: 220 25% 20%;
+    --ring: 174 62% 50%;
+
+    --sidebar-background: 220 30% 6%;
+    --sidebar-foreground: 215 20% 90%;
+    --sidebar-primary: 174 62% 50%;
+    --sidebar-primary-foreground: 220 25% 8%;
+    --sidebar-accent: 220 25% 12%;
+    --sidebar-accent-foreground: 215 20% 90%;
+    --sidebar-border: 220 25% 15%;
+    --sidebar-ring: 174 62% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30;
+  }
+}
+
+@layer components {
+  /* Status badge animations */
+  .status-pulse {
+    animation: statusPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes statusPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Table card hover effects */
+  .table-card {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .table-card:hover {
+    @apply -translate-y-1;
+  }
+
+  /* Order item slide in */
+  .order-item-enter {
+    animation: orderSlideIn 0.3s ease-out;
+  }
+
+  @keyframes orderSlideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* KOT card animation */
+  .kot-card {
+    animation: kotEnter 0.4s ease-out;
+  }
+
+  @keyframes kotEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(174 62% 38%) 0%, hsl(174 62% 28%) 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(38 95% 55%) 0%, hsl(25 95% 50%) 100%);
+  }
+
+  .gradient-dark {
+    background: linear-gradient(180deg, hsl(220 25% 12%) 0%, hsl(220 25% 8%) 100%);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Touch-friendly button sizes */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Number display for tables */
+  .table-number {
+    @apply font-mono font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Status colors utilities */
+  .bg-status-available {
+    background-color: hsl(var(--status-available));
+  }
+
+  .bg-status-occupied {
+    background-color: hsl(var(--status-occupied));
+  }
+
+  .bg-status-reserved {
+    background-color: hsl(var(--status-reserved));
+  }
+
+  .bg-status-cleaning {
+    background-color: hsl(var(--status-cleaning));
+  }
+
+  .bg-order-pending {
+    background-color: hsl(var(--order-pending));
+  }
+
+  .bg-order-preparing {
+    background-color: hsl(var(--order-preparing));
+  }
+
+  .bg-order-ready {
+    background-color: hsl(var(--order-ready));
+  }
+
+  .bg-order-served {
+    background-color: hsl(var(--order-served));
+  }
+
+  .text-status-available {
+    color: hsl(var(--status-available));
+  }
+
+  .text-status-occupied {
+    color: hsl(var(--status-occupied));
+  }
+
+  .text-order-pending {
+    color: hsl(var(--order-pending));
+  }
+
+  .text-order-preparing {
+    color: hsl(var(--order-preparing));
+  }
+
+  .text-order-ready {
+    color: hsl(var(--order-ready));
+  }
+}

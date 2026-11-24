@@ -1,0 +1,15 @@
+{
+  "name": "ws-pos-e2e",
+  "private": true,
+  "description": "Real-browser checks of the Next.js frontend against the running Docker stack (CORS, tokens, live updates)",
+  "scripts": {
+    "install:browser": "playwright install chromium",
+    "screens": "node screens.mjs",
+    "order-flow": "node order-flow.mjs",
+    "pay-qr-roles": "node pay-qr-roles.mjs",
+    "demo-login": "node demo-login.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

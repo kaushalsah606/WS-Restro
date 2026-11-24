@@ -1,0 +1,157 @@
+# Harmony Hub POS – whole system
+#   Next.js frontend · NestJS api + worker · PostgreSQL · Redis · Kafka · OpenSearch
+#
+# Each part owns its configuration:
+#   Backend/Dockerfile   + Backend/.env.docker        (copy from Backend/.env.docker.example)
+#   Frontend/Dockerfile  + Frontend/.env.production   (public NEXT_PUBLIC_* values, baked in at build)
+# This file only wires them together. Host ports can be overridden via the shell, e.g. API_PORT=5001.
+#
+#   cp Backend/.env.docker.example Backend/.env.docker    # once, then set the JWT secrets
+#   docker compose up -d --build                          # everything
+#   docker compose up -d postgres redis kafka opensearch  # infra only (run the API with `npm run start:dev` in Backend/)
+#   docker compose --profile tools up -d                  # + Kafka UI & OpenSearch Dashboards
+#   Frontend http://localhost:8080 · API http://localhost:5000/docs
+name: ws-pos
+
+services:
+  # ───────── PostgreSQL ─────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ./Backend/.env.docker # POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB
+    ports: ["${POSTGRES_PORT:-5433}:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ───────── Redis (cache, BullMQ, Socket.IO adapter) ─────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ───────── Apache Kafka (KRaft, single node) ─────────
+  kafka:
+    image: apache/kafka:3.8.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:${KAFKA_EXTERNAL_PORT:-29092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports: ["${KAFKA_EXTERNAL_PORT:-29092}:29092"]
+    volumes: [kafka_data:/var/lib/kafka/data]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  # ───────── OpenSearch (single node; security plugin off – keep on a private network) ─────────
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    ports: ["${OPENSEARCH_PORT:-9200}:9200"]
+    volumes: [opensearch_data:/usr/share/opensearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # ───────── API: HTTP + Socket.IO + realtime consumer. Applies migrations + seed on boot. ─────────
+  api:
+    build: { context: ./Backend, target: runtime }
+    image: ws-pos-backend:latest
+    restart: unless-stopped
+    env_file: ./Backend/.env.docker
+    environment:
+      APP_ROLE: api
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      opensearch: { condition: service_healthy }
+    ports: ["${API_PORT:-5000}:5000"]
+
+  # ───────── Worker: Kafka consumers + BullMQ processors (scale: --scale worker=N) ─────────
+  worker:
+    image: ws-pos-backend:latest
+    restart: unless-stopped
+    env_file: ./Backend/.env.docker
+    environment:
+      APP_ROLE: worker
+      RUN_MIGRATIONS: "false"
+      RUN_SEED: "false"
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      disable: true
+
+  # ───────── Frontend: Next.js ─────────
+  frontend:
+    build: { context: ./Frontend }
+    image: ws-pos-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["${FRONTEND_PORT:-8080}:8080"]
+
+  # ───────── optional developer tools ─────────
+  kafka-ui:
+    profiles: ["tools"]
+    image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
+    depends_on:
+      kafka: { condition: service_healthy }
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ws-pos
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports: ["${KAFKA_UI_PORT:-8081}:8080"]
+
+  opensearch-dashboards:
+    profiles: ["tools"]
+    image: opensearchproject/opensearch-dashboards:2.17.1
+    restart: unless-stopped
+    depends_on:
+      opensearch: { condition: service_healthy }
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports: ["${DASHBOARDS_PORT:-5601}:5601"]
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  opensearch_data:

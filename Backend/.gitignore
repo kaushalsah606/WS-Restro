@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-seed
+.env
+.env.docker
+*.log
+coverage
+.DS_Store
+tsconfig.tsbuildinfo

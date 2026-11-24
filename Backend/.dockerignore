@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-seed
+.env
+.env.docker
+.git
+*.log
+coverage
+tsconfig.tsbuildinfo
+README.md
